@@ -59,20 +59,61 @@
                 font-size: 0.9rem;
                 color: #475569;
             }
+            .btn-set-bonbonan {
+                background-color: black;
+                color: white;
+                border: none;
+                padding: 0.35rem 0.75rem;
+                border-radius: 6px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                cursor: pointer;
+                white-space: nowrap;
+                transition: background-color 0.15s ease;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            }
+            .btn-set-bonbonan:hover {
+                background-color: #333;
+            }
         </style>
     </head>
     <body>
         <x-navbar />
 
         <div style="padding-top: 10px;">
-            <input type="text" class="searchMain" placeholder="Cari...">
+            <input type="text" autocomplete="off" class="searchMain" placeholder="Cari...">
             <table style="width: calc(100% - 2rem);" class="name">
+                <thead>
+                    <tr>
+                        <th style="border: none;"></th>
+                        <th style="border: none;"></th>
+                        <th style="border: none;"></th>
+                        <th style="border: none;"></th>
+                        <th style="border: none;"></th>
+                        <th style="border: none; text-align: left; padding: 0.25rem 0.5rem 0.5rem 0.5rem;">
+                            @if(!empty($periodeSekarang))
+                            <form action="{{ route('transaksi.set-all-bonbonan') }}" method="POST" onsubmit="return confirm('Yakin ingin mengatur semua bonbonan menjadi Rp 1.000.000 pada periode ini?')">
+                                @csrf
+                                <input type="hidden" name="id_periode" value="{{ $periodeSekarang->id_periode }}">
+                                <button type="submit" class="btn-set-bonbonan" title="Set semua bonbonan jadi 1 Juta">
+                                    Set Bonbonan 1 Jt
+                                </button>
+                            </form>
+                            @endif
+                        </th>
+                        <th style="border: none;"></th>
+                        <th style="border: none;"></th>
+                        <th style="border: none;"></th>
+                        <th style="border: none;"></th>
+                        <th style="border: none;"></th>
+                    </tr>
+                </thead>
                 <tbody>
                     @foreach ($rekapGaji as $data)
                     <tr class="clickable-row" onclick="openEditModal(this)" data-transaksi="{{ json_encode($data) }}" title="Klik untuk edit data">
                         <td>{{ $data->nama }}</td>
                         <td>{{ $data->absen ?? 0 }}</td>
-                        <td>{{ $data->absen_2 ?? 0 }}</td>
+                        <td>{{ $data->absen_2 }}</td>
                         <td>Rp {{ number_format($data->gaji,0,',','.') }}</td>
                         <td>Rp {{ number_format(($data->absen ?? 0) * ($data->gaji ?? 0),0,',','.') }}</td>
                         <td>Rp {{ number_format($data->bonbonan ?? 0,0,',','.') }}</td>
@@ -91,12 +132,7 @@
         <div id="modalEditTransaksi" class="modal">
             <div class="modal-content modal-content-lg">
                 <div class="modal-header">
-                    <div>
-                        <h3>Edit Data: <span id="modalNamaTukang" style="font-weight: 700;"></span></h3>
-                        <div id="modalGajiInfo" class="info-gaji" style="margin-top: 0.5rem;">
-                            Tarif Harian: <strong id="displayTarifHarian">Rp 0</strong>
-                        </div>
-                    </div>
+                    <h3>Edit Data: <span id="modalNamaTukang" style="font-weight: 700;"></span></h3>
                     <span class="close" onclick="closeEditModal()">&times;</span>
                 </div>
                 <form id="formEditTransaksi" action="{{ route('transaksi.save') }}" method="POST">
@@ -105,40 +141,45 @@
                     <input type="hidden" id="edit_id_periode" name="id_periode" value="{{ $periodeSekarang->id_periode ?? '' }}">
 
                     <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="edit_gaji">Gaji (Rp)</label>
+                            <input type="text" autocomplete="off" inputmode="numeric" id="edit_gaji" name="gaji" class="form-input" placeholder="0" oninput="formatNumberInput(this)" required>
+                        </div>
+
                         <div class="form-group">
-                            <label for="edit_absen">Absen 1 (Hari)</label>
+                            <label for="edit_absen">Absen</label>
                             <input type="number" step="0.5" id="edit_absen" name="absen" class="form-input" placeholder="0" oninput="calculateHasilAkhir()">
                         </div>
                         <div class="form-group">
-                            <label for="edit_absen_2">Absen 2 (Hari)</label>
-                            <input type="number" step="0.5" id="edit_absen_2" name="absen_2" class="form-input" placeholder="0" oninput="calculateHasilAkhir()">
+                            <label for="edit_absen_2">Absen 2</label>
+                            <input type="number" step="0.5" id="edit_absen_2" name="absen_2" class="form-input" placeholder="Opsional" oninput="calculateHasilAkhir()">
                         </div>
 
                         <div class="form-group">
                             <label for="edit_bonbonan">Bonbonan (Rp)</label>
-                            <input type="number" id="edit_bonbonan" name="bonbonan" class="form-input" placeholder="0" oninput="calculateHasilAkhir()">
+                            <input type="text" autocomplete="off" inputmode="numeric" id="edit_bonbonan" name="bonbonan" class="form-input" placeholder="0" oninput="formatNumberInput(this)">
                         </div>
                         <div class="form-group">
                             <label for="edit_bon">Bon (Rp)</label>
-                            <input type="number" id="edit_bon" name="bon" class="form-input" placeholder="0" oninput="calculateHasilAkhir()">
+                            <input type="text" autocomplete="off" inputmode="numeric" id="edit_bon" name="bon" class="form-input" placeholder="0" oninput="formatNumberInput(this)">
                         </div>
 
                         <div class="form-group">
                             <label for="edit_bon_lain">Bon Lain (Rp)</label>
-                            <input type="number" id="edit_bon_lain" name="bon_lain" class="form-input" placeholder="0" oninput="calculateHasilAkhir()">
+                            <input type="text" autocomplete="off" inputmode="numeric" id="edit_bon_lain" name="bon_lain" class="form-input" placeholder="0" oninput="formatNumberInput(this)">
                         </div>
                         <div class="form-group">
                             <label for="edit_keterangan_bon_lain">Ket. Bon Lain</label>
-                            <input type="text" id="edit_keterangan_bon_lain" name="keterangan_bon_lain" class="form-input" placeholder="Contoh: Beli rokok / semen">
+                            <input type="text" autocomplete="off" id="edit_keterangan_bon_lain" name="keterangan_bon_lain" class="form-input" placeholder="Contoh: Transport">
                         </div>
 
                         <div class="form-group">
                             <label for="edit_bonus">Bonus (Rp)</label>
-                            <input type="number" id="edit_bonus" name="bonus" class="form-input" placeholder="0" oninput="calculateHasilAkhir()">
+                            <input type="text" autocomplete="off" inputmode="numeric" id="edit_bonus" name="bonus" class="form-input" placeholder="0" oninput="formatNumberInput(this)">
                         </div>
                         <div class="form-group">
                             <label for="edit_hasil_akhir">Hasil Akhir (Rp)</label>
-                            <input type="number" id="edit_hasil_akhir" name="hasil_akhir" class="form-input" style="font-weight: bold; background-color: #f1f5f9;">
+                            <input type="text" autocomplete="off" inputmode="numeric" id="edit_hasil_akhir" name="hasil_akhir" class="form-input" style="font-weight: bold; background-color: #f1f5f9; cursor: not-allowed;" readonly>
                         </div>
                     </div>
 
@@ -151,31 +192,54 @@
         </div>
 
         <script>
-            let currentGaji = 0;
+            function formatRibuan(angka) {
+                if (angka === null || angka === undefined || angka === '') return '';
+                const clean = angka.toString().replace(/\D/g, '');
+                if (!clean) return '';
+                return new Intl.NumberFormat('id-ID').format(clean);
+            }
+
+            function parseRibuan(val) {
+                if (!val) return 0;
+                return parseFloat(val.toString().replace(/\./g, '')) || 0;
+            }
+
+            function formatNumberInput(el) {
+                const clean = el.value.replace(/\D/g, '');
+                el.value = clean ? new Intl.NumberFormat('id-ID').format(clean) : '';
+                calculateHasilAkhir();
+            }
 
             function openEditModal(row) {
                 const data = JSON.parse(row.dataset.transaksi);
-                currentGaji = parseFloat(data.gaji) || 0;
 
                 document.getElementById('edit_id_tukang').value = data.id_tukang;
                 document.getElementById('modalNamaTukang').innerText = data.nama;
-                document.getElementById('displayTarifHarian').innerText = 'Rp ' + new Intl.NumberFormat('id-ID').format(currentGaji);
+                document.getElementById('edit_gaji').value = data.gaji !== null ? formatRibuan(data.gaji) : '';
 
                 document.getElementById('edit_absen').value = data.absen !== null ? data.absen : '';
                 document.getElementById('edit_absen_2').value = data.absen_2 !== null ? data.absen_2 : '';
-                document.getElementById('edit_bonbonan').value = data.bonbonan !== null ? data.bonbonan : '';
-                document.getElementById('edit_bon').value = data.bon !== null ? data.bon : '';
-                document.getElementById('edit_bon_lain').value = data.bon_lain !== null ? data.bon_lain : '';
+                document.getElementById('edit_bonbonan').value = data.bonbonan !== null ? formatRibuan(data.bonbonan) : '';
+                document.getElementById('edit_bon').value = data.bon !== null ? formatRibuan(data.bon) : '';
+                document.getElementById('edit_bon_lain').value = data.bon_lain !== null ? formatRibuan(data.bon_lain) : '';
                 document.getElementById('edit_keterangan_bon_lain').value = data.keterangan_bon_lain || '';
-                document.getElementById('edit_bonus').value = data.bonus !== null ? data.bonus : '';
+                document.getElementById('edit_bonus').value = data.bonus !== null ? formatRibuan(data.bonus) : '';
 
                 if (data.hasil_akhir !== null) {
-                    document.getElementById('edit_hasil_akhir').value = data.hasil_akhir;
+                    document.getElementById('edit_hasil_akhir').value = formatRibuan(data.hasil_akhir);
                 } else {
                     calculateHasilAkhir();
                 }
 
                 document.getElementById('modalEditTransaksi').style.display = 'flex';
+
+                setTimeout(() => {
+                    const absenInput = document.getElementById('edit_absen');
+                    if (absenInput) {
+                        absenInput.focus();
+                        absenInput.select();
+                    }
+                }, 50);
             }
 
             function closeEditModal() {
@@ -184,19 +248,29 @@
             }
 
             function calculateHasilAkhir() {
+                const gaji = parseRibuan(document.getElementById('edit_gaji').value);
                 const absen = parseFloat(document.getElementById('edit_absen').value) || 0;
                 const absen2 = parseFloat(document.getElementById('edit_absen_2').value) || 0;
-                const bonbonan = parseFloat(document.getElementById('edit_bonbonan').value) || 0;
-                const bon = parseFloat(document.getElementById('edit_bon').value) || 0;
-                const bonLain = parseFloat(document.getElementById('edit_bon_lain').value) || 0;
-                const bonus = parseFloat(document.getElementById('edit_bonus').value) || 0;
+                const bonbonan = parseRibuan(document.getElementById('edit_bonbonan').value);
+                const bon = parseRibuan(document.getElementById('edit_bon').value);
+                const bonLain = parseRibuan(document.getElementById('edit_bon_lain').value);
+                const bonus = parseRibuan(document.getElementById('edit_bonus').value);
 
-                const totalGaji = (absen + absen2) * currentGaji;
+                const totalGaji = (absen + absen2) * gaji;
                 const totalPotongan = bonbonan + bon + bonLain;
                 const hasil = totalGaji + bonus - totalPotongan;
 
-                document.getElementById('edit_hasil_akhir').value = Math.round(hasil);
+                document.getElementById('edit_hasil_akhir').value = formatRibuan(Math.round(hasil));
             }
+
+            document.getElementById('formEditTransaksi').addEventListener('submit', function() {
+                ['edit_gaji', 'edit_bonbonan', 'edit_bon', 'edit_bon_lain', 'edit_bonus', 'edit_hasil_akhir'].forEach(id => {
+                    const input = document.getElementById(id);
+                    if (input && input.value) {
+                        input.value = input.value.replace(/\./g, '');
+                    }
+                });
+            });
 
             window.addEventListener('click', function(event) {
                 const modal = document.getElementById('modalEditTransaksi');

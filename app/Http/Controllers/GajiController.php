@@ -40,7 +40,7 @@ class GajiController extends Controller
                 'transaksi_gaji.keterangan_bon_lain',
                 'transaksi_gaji.bonus',
                 'transaksi_gaji.hasil_akhir'
-            )->orderBy('tukang.nama', 'asc');
+            )->orderBy('tukang.id_tukang', 'asc');
         $rekapGaji = $query->get();
 
         return view('home', compact('rekapGaji', 'periode', 'tahunList', 'tahunSekarang', 'periodeSekarang'));
@@ -48,9 +48,20 @@ class GajiController extends Controller
 
     public function saveTransaksi(Request $request)
     {
+        // Bersihkan tanda titik pemisah ribuan jika ada
+        $request->merge([
+            'gaji' => $request->filled('gaji') ? str_replace('.', '', $request->gaji) : null,
+            'bonbonan' => $request->filled('bonbonan') ? str_replace('.', '', $request->bonbonan) : null,
+            'bon' => $request->filled('bon') ? str_replace('.', '', $request->bon) : null,
+            'bon_lain' => $request->filled('bon_lain') ? str_replace('.', '', $request->bon_lain) : null,
+            'bonus' => $request->filled('bonus') ? str_replace('.', '', $request->bonus) : null,
+            'hasil_akhir' => $request->filled('hasil_akhir') ? str_replace('.', '', $request->hasil_akhir) : null,
+        ]);
+
         $request->validate([
             'id_tukang' => 'required|integer',
             'id_periode' => 'required|integer',
+            'gaji' => 'nullable|numeric|min:0',
             'absen' => 'nullable|numeric|min:0',
             'absen_2' => 'nullable|numeric|min:0',
             'bonbonan' => 'nullable|numeric|min:0',
@@ -61,14 +72,18 @@ class GajiController extends Controller
             'hasil_akhir' => 'nullable|numeric',
         ]);
 
+        if ($request->filled('gaji')) {
+            DB::table('tukang')->where('id_tukang', $request->id_tukang)->update([
+                'gaji' => $request->gaji,
+            ]);
+        }
+
         $tukang = DB::table('tukang')->where('id_tukang', $request->id_tukang)->first();
-        $gaji = $tukang ? $tukang->gaji : 0;
+        $gaji = $request->filled('gaji') ? (float)$request->gaji : ($tukang ? $tukang->gaji : 0);
         $totalAbsen = (float)($request->absen ?? 0) + (float)($request->absen_2 ?? 0);
         $totalGaji = $totalAbsen * $gaji;
         $totalPotongan = (int)($request->bonbonan ?? 0) + (int)($request->bon ?? 0) + (int)($request->bon_lain ?? 0);
-        $hasilAkhirOtomatis = $totalGaji + (int)($request->bonus ?? 0) - $totalPotongan;
-
-        $hasilAkhir = $request->filled('hasil_akhir') ? (int)$request->hasil_akhir : $hasilAkhirOtomatis;
+        $hasilAkhir = $totalGaji + (int)($request->bonus ?? 0) - $totalPotongan;
 
         DB::table('transaksi_gaji')->updateOrInsert(
             [
@@ -88,5 +103,47 @@ class GajiController extends Controller
         );
 
         return redirect()->back()->with('success', 'Data absensi & transaksi berhasil disimpan');
+    }
+
+    public function setAllBonbonan(Request $request)
+    {
+        $idPeriode = $request->input('id_periode');
+        if (!$idPeriode) {
+            return redirect()->back()->with('error', 'Periode tidak valid');
+        }
+
+        $nominalBonbonan = 1000000;
+        $allTukang = DB::table('tukang')->get();
+
+        foreach ($allTukang as $t) {
+            $existing = DB::table('transaksi_gaji')
+                ->where('id_tukang', $t->id_tukang)
+                ->where('id_periode', $idPeriode)
+                ->first();
+
+            $absen = $existing ? ($existing->absen ?? 0) : 0;
+            $absen2 = $existing ? ($existing->absen_2 ?? 0) : 0;
+            $bon = $existing ? ($existing->bon ?? 0) : 0;
+            $bonLain = $existing ? ($existing->bon_lain ?? 0) : 0;
+            $bonus = $existing ? ($existing->bonus ?? 0) : 0;
+
+            $totalAbsen = (float)$absen + (float)$absen2;
+            $totalGaji = $totalAbsen * (float)$t->gaji;
+            $totalPotongan = $nominalBonbonan + (int)$bon + (int)$bonLain;
+            $hasilAkhir = $totalGaji + (int)$bonus - $totalPotongan;
+
+            DB::table('transaksi_gaji')->updateOrInsert(
+                [
+                    'id_tukang' => $t->id_tukang,
+                    'id_periode' => $idPeriode,
+                ],
+                [
+                    'bonbonan' => $nominalBonbonan,
+                    'hasil_akhir' => $hasilAkhir,
+                ]
+            );
+        }
+
+        return redirect()->back()->with('success', 'Semua bonbonan berhasil diatur menjadi Rp 1.000.000');
     }
 }
