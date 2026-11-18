@@ -11,14 +11,12 @@ class TukangController extends Controller
     {
         $request->validate([
             'nama' => 'required|string|max:255',
-            'gaji' => 'required|numeric',
-            'no_hp' => 'nullable|string|max:20',
+            'gaji' => 'required|numeric'
         ]);
 
         DB::table('tukang')->insert([
             'nama' => $request->nama,
-            'gaji' => $request->gaji,
-            'no_hp' => $request->no_hp,
+            'gaji' => $request->gaji
         ]);
 
         return redirect()->back()->with('success', 'Tukang berhasil ditambahkan');

@@ -46,10 +46,6 @@
                 <label for="gaji">Gaji Per Hari</label>
                 <input type="number" id="gaji" name="gaji" class="form-input" required>
             </div>
-            <div class="form-group">
-                <label for="no_hp">No. HP</label>
-                <input type="text" id="no_hp" name="no_hp" class="form-input">
-            </div>
             <div class="modal-footer">
                 <button type="button" class="btn-cancel" onclick="closeModal()">Batal</button>
                 <button type="submit" class="btn-submit">Simpan</button>
